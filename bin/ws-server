@@ -13,11 +13,12 @@ use Ratchet\MessageComponentInterface;
 use EgorNovikov\PhpSocket\WebSocket\Connection\ConnectionManager;
 use EgorNovikov\PhpSocket\WebSocket\Domain\Message\MessageRouter;
 use EgorNovikov\PhpSocket\WebSocket\Domain\Message\MessageFactory;
+use EgorNovikov\PhpSocket\WebSocket\Router\RouterFactory;
 
-class EmptyHandler implements MessageComponentInterface
+class WebSocketHandler implements MessageComponentInterface
 {
-    private $manager;
-    private $router;
+    private ConnectionManager $manager;
+    private MessageRouter $router;
 
     public function __construct(ConnectionManager $manager, MessageRouter $router)
     {
@@ -25,25 +26,25 @@ class EmptyHandler implements MessageComponentInterface
         $this->router = $router;
     }
 
-    public function onOpen(ConnectionInterface $conn)
+    public function onOpen(ConnectionInterface $conn): void
     {
         echo "New connection: {$conn->resourceId}\n";
         $this->manager->addConnection($conn);
     }
 
-    public function onMessage(ConnectionInterface $from, $msg)
+    public function onMessage(ConnectionInterface $from, $msg): void
     {
         $message = MessageFactory::createFromString($msg);
         $this->router->route($message, $from);
     }
 
-    public function onClose(ConnectionInterface $conn)
+    public function onClose(ConnectionInterface $conn): void
     {
         echo "Connection closed: {$conn->resourceId}\n";
         $this->manager->removeConnection($conn);
     }
 
-    public function onError(ConnectionInterface $conn, \Exception $e)
+    public function onError(ConnectionInterface $conn, \Exception $e): void
     {
         echo "Error: {$e->getMessage()}\n";
         $this->manager->removeConnection($conn);
@@ -52,12 +53,12 @@ class EmptyHandler implements MessageComponentInterface
 }
 
 $connectionManager = new ConnectionManager();
-$router = new MessageRouter();
+$router = RouterFactory::create();
 
 $server = IoServer::factory(
     new HttpServer(
         new WsServer(
-            new EmptyHandler($connectionManager, $router)
+            new WebSocketHandler($connectionManager, $router)
         )
     ),
     8080 // Порт
