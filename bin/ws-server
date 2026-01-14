@@ -1,0 +1,61 @@
+#!/usr/bin/env php
+<?php
+error_reporting(E_ALL & ~E_DEPRECATED);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use Ratchet\Server\IoServer;
+use Ratchet\Http\HttpServer;
+use Ratchet\WebSocket\WsServer;
+use Ratchet\MessageComponentInterface;
+use Ratchet\ConnectionInterface;
+
+use EgorNovikov\PhpSocket\WebSocket\Connection\ConnectionManager;
+
+class EmptyHandler implements MessageComponentInterface
+{
+  private $manager;
+
+    public function __construct(ConnectionManager $manager)
+    {
+      $this->manager = $manager;
+    }
+
+    public function onOpen(ConnectionInterface $conn)
+    {
+        echo "New connection: {$conn->resourceId}\n";
+        $this->manager->addConnection($conn);
+    }
+
+    public function onMessage(ConnectionInterface $from, $msg)
+    {
+        // Пока ничего не делаем с сообщением
+    }
+
+    public function onClose(ConnectionInterface $conn)
+    {
+        echo "Connection closed: {$conn->resourceId}\n";
+        $this->manager->removeConnection($conn);
+    }
+
+    public function onError(ConnectionInterface $conn, \Exception $e)
+    {
+        echo "Error: {$e->getMessage()}\n";
+        $this->manager->removeConnection($conn);
+        $conn->close();
+    }
+}
+
+$connectionManager = new ConnectionManager();
+
+$server = IoServer::factory(
+    new HttpServer(
+        new WsServer(
+            new EmptyHandler($connectionManager)
+        )
+    ),
+    8080 // Порт
+);
+
+echo "WebSocket server started on ws://localhost:8080\n";
+$server->run();
