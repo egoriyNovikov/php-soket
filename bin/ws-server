@@ -34,8 +34,19 @@ class WebSocketHandler implements MessageComponentInterface
 
     public function onMessage(ConnectionInterface $from, $msg): void
     {
+        echo "Received: {$msg}\n";
         $message = MessageFactory::createFromString($msg);
-        $this->router->route($message, $from);
+        echo "Parsed type: {$message->getType()}\n";
+        
+        try {
+            $this->router->route($message, $from);
+        } catch (\Exception $e) {
+            echo "Route error: {$e->getMessage()}\n";
+            $from->send(json_encode([
+                'type' => 'error',
+                'payload' => ['message' => $e->getMessage()]
+            ]));
+        }
     }
 
     public function onClose(ConnectionInterface $conn): void
