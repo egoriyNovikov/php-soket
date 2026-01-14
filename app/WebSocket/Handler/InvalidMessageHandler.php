@@ -1,12 +1,12 @@
-<?php
+<?php 
 
 namespace EgorNovikov\PhpSocket\WebSocket\Handler;
 
 use Ratchet\ConnectionInterface;
 use EgorNovikov\PhpSocket\WebSocket\Domain\Message\Message;
 
-class MessageHandler {
+class InvalidMessageHandler {
   public function handle(Message $message, ConnectionInterface $connection) {
-    echo "Message handler: {$message->getType()}\n";
+    echo "Invalid message handler: {$message->getType()}\n";
   }
 }

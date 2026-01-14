@@ -4,21 +4,25 @@ error_reporting(E_ALL & ~E_DEPRECATED);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use Ratchet\Server\IoServer;
 use Ratchet\Http\HttpServer;
+use Ratchet\Server\IoServer;
 use Ratchet\WebSocket\WsServer;
-use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
+use Ratchet\MessageComponentInterface;
 
 use EgorNovikov\PhpSocket\WebSocket\Connection\ConnectionManager;
+use EgorNovikov\PhpSocket\WebSocket\Domain\Message\MessageRouter;
+use EgorNovikov\PhpSocket\WebSocket\Domain\Message\MessageFactory;
 
 class EmptyHandler implements MessageComponentInterface
 {
-  private $manager;
+    private $manager;
+    private $router;
 
-    public function __construct(ConnectionManager $manager)
+    public function __construct(ConnectionManager $manager, MessageRouter $router)
     {
-      $this->manager = $manager;
+        $this->manager = $manager;
+        $this->router = $router;
     }
 
     public function onOpen(ConnectionInterface $conn)
@@ -29,7 +33,8 @@ class EmptyHandler implements MessageComponentInterface
 
     public function onMessage(ConnectionInterface $from, $msg)
     {
-        // Пока ничего не делаем с сообщением
+        $message = MessageFactory::createFromString($msg);
+        $this->router->route($message, $from);
     }
 
     public function onClose(ConnectionInterface $conn)
@@ -47,11 +52,12 @@ class EmptyHandler implements MessageComponentInterface
 }
 
 $connectionManager = new ConnectionManager();
+$router = new MessageRouter();
 
 $server = IoServer::factory(
     new HttpServer(
         new WsServer(
-            new EmptyHandler($connectionManager)
+            new EmptyHandler($connectionManager, $router)
         )
     ),
     8080 // Порт
