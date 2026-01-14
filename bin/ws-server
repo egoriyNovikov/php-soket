@@ -40,8 +40,27 @@ class WebSocketHandler implements MessageComponentInterface
 
     public function onClose(ConnectionInterface $conn): void
     {
-        echo "Connection closed: {$conn->resourceId}\n";
-        $this->manager->removeConnection($conn);
+        $user = $this->manager->removeConnection($conn);
+        
+        if ($user !== null) {
+            $username = $user->getUsername();
+            echo "User left: {$username}\n";
+            
+            // Уведомляем остальных о выходе пользователя
+            $this->manager->broadcastToAll([
+                'type' => 'user_left',
+                'payload' => [
+                    'username' => $username,
+                    'users' => $this->manager->getOnlineUsernames(),
+                    'time' => date('H:i:s')
+                ]
+            ]);
+            
+            // Добавляем в историю
+            $this->manager->addToHistory($username, 'покинул чат', 'system');
+        } else {
+            echo "Connection closed: {$conn->resourceId}\n";
+        }
     }
 
     public function onError(ConnectionInterface $conn, \Exception $e): void
@@ -53,7 +72,7 @@ class WebSocketHandler implements MessageComponentInterface
 }
 
 $connectionManager = new ConnectionManager();
-$router = RouterFactory::create();
+$router = RouterFactory::create($connectionManager);
 
 $server = IoServer::factory(
     new HttpServer(
